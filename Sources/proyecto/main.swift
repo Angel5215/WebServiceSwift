@@ -7,13 +7,13 @@ import ExtendedJSON
 
 //	Database configuration (2 meses)
 let myDatabase = try MongoKitten.Database("mongodb://localhost/espaciales")
-//conexion para cada coleccion de la base de datos
+/*//conexion para cada coleccion de la base de datos
 let estacionamiento = myDatabase["estacionamiento"] // colección en MongoDB
 let actividad = myDatabase["actividad"]
 let comida = myDatabase["comida"]
 let facultad = myDatabase["facultad"]
 let representativo = myDatabase["representativo"]
-let ruta = myDatabase["ruta"]
+let ruta = myDatabase["ruta"]*/
 
 
 //	Bitácora (warnings, errores, info, verbose, etc...)
@@ -44,20 +44,13 @@ router.get("/:topico") {
 		return
 	}
 
-	//select * from topico
-	if topico == "estacionamiento" {
+		let coleccion = myDatabase[topico]
 
-		let query = try Array(estacionamiento.find())
+		let query = try Array(coleccion.find())
 
 		print(query)
 		print(query.count)
 		response.send(query.makeExtendedJSON().serializedString())
-		//response.send("\n")
-
-
-	}
-
-	
 
 }
 
