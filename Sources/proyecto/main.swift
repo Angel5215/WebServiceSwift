@@ -4,6 +4,7 @@ import HeliumLogger
 import KituraStencil
 import MongoKitten
 import ExtendedJSON
+import GeoJSON
 
 //	Database configuration (2 meses)
 let myDatabase = try MongoKitten.Database("mongodb://localhost/espaciales")
@@ -34,11 +35,6 @@ router.get("/:topico") {
 	//	defer se llama al final de terminar el método
 	defer { next() }
 
-	//	select * from espaciales.salon as salones; [Document] coordinates: [1, 2] BSON
-/*	for salon in try salones.find() {
-		response.send(salon.makeExtendedJSON().serializedString())
-	}*/
-
 	guard let topico = request.parameters["topico"] else {
 		try response.status(.badRequest).end()
 		return
@@ -54,7 +50,51 @@ router.get("/:topico") {
 
 }
 
+//Buffer para buscar topicos a partir de la ubicacion actual
+router.post("/buffer/:topico", middleware: BodyParser())
+router.post("/buffer/:topico"){
+	request, response, next in
 
+	//	defer se llama al final de terminar el método
+	defer { next() }
+
+	guard let topico = request.parameters["topico"] else {
+		try response.status(.badRequest).end()
+		return
+	}
+	let coleccion = myDatabase[topico]
+
+	guard let values = request.body else {
+		try response.status(.badRequest).end()
+		return
+	}
+
+	guard case .urlEncoded(let body) = values else {
+		try response.status(.badRequest).end()
+		return
+	}
+	
+	print(body)
+
+
+	if let latitudCadena = body["latitud"], let longitudCadena = body["longitud"], let latitud = Double(latitudCadena), let longitud = Double(longitudCadena), let metrosCadena = body["metros"], let metros = Double(metrosCadena){
+
+
+		let position = try Position(values: [longitud, latitud])
+		let punto = Point(coordinate: position)
+		let geoNearOption = GeoNearOptions(near: punto, spherical: true, distanceField: "dist.calculated", maxDistance: metros)
+
+        let geoNearStage = AggregationPipeline.Stage.geoNear(options: geoNearOption)
+
+        let pipeline: AggregationPipeline = [geoNearStage]
+
+        let results = Array(try coleccion.aggregate(pipeline))
+
+        response.send(results.makeExtendedJSON().serializedString())
+
+	}
+
+}
 
 
 Kitura.addHTTPServer(onPort: 8090, with: router)
